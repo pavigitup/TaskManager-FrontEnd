@@ -7,10 +7,6 @@ import KanbanBoard from '@views/apps/kanban/KanbanBoard'
 // Util Imports
 import { commonLayoutClasses } from '@layouts/utils/layoutClasses'
 
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { verifyToken } from '@/libs/auth'
-
 // Styles Imports
 import styles from '@views/apps/kanban/styles.module.css'
 

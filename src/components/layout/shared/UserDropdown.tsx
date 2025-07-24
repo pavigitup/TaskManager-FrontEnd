@@ -22,8 +22,9 @@ import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
 
 // Hook Imports
-import { useSettings } from '@core/hooks/useSettings'
 import { useDispatch } from 'react-redux'
+
+import { useSettings } from '@core/hooks/useSettings'
 import { logout } from '@/redux-store/slices/auth'
 
 // Styled component for badge content

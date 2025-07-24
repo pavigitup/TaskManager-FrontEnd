@@ -17,12 +17,9 @@ import Navbar from '@components/layout/vertical/Navbar'
 import VerticalFooter from '@components/layout/vertical/Footer'
 import HorizontalFooter from '@components/layout/horizontal/Footer'
 import ScrollToTop from '@core/components/scroll-to-top'
-import { verifyToken } from '@/libs/auth'
 
 // Util Imports
 import { getMode, getSystemMode } from '@core/utils/serverHelpers'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 const Layout = async ({ children }: ChildrenType) => {
   // Vars

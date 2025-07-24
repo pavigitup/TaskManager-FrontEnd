@@ -1,10 +1,13 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import axios from 'axios'
 
 interface User {
+
   // Define user properties here
   id: string;
   email: string;
+
   // Add other relevant user properties
 }
 
@@ -26,8 +29,10 @@ export const loginUser = createAsyncThunk(
                     withCredentials: true
                 }
             )
+
             localStorage.setItem('token', res.data.token)
-            return res.data.user
+            
+return res.data.user
         } catch (err: any) {
             return thunkAPI.rejectWithValue(err.response?.data || 'Login failed')
         }
@@ -37,10 +42,13 @@ export const loginUser = createAsyncThunk(
 export const getTasks = createAsyncThunk('auth/getTasks', async (_, thunkAPI) => {
     try {
         const token = localStorage.getItem('token')
+
         const res = await axios.get('http://localhost:5000/api/tasks', {
             headers: { Authorization: `Bearer ${token}` }
         })
-        return res.data
+
+        
+return res.data
     } catch (err: any) {
         return thunkAPI.rejectWithValue(err.response?.data || 'Failed to fetch tasks')
     }

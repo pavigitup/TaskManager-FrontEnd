@@ -1,6 +1,8 @@
 // Third-party Imports
 import { configureStore } from '@reduxjs/toolkit'
+
 import auth from './slices/auth'
+
 // Slice Imports
 import kanbanReducer from '../redux-store/slices/kanban'
 
