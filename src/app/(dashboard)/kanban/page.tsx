@@ -1,0 +1,31 @@
+// Third-party Imports
+import classnames from 'classnames'
+
+// Component Imports
+import KanbanBoard from '@views/apps/kanban/KanbanBoard'
+
+// Util Imports
+import { commonLayoutClasses } from '@layouts/utils/layoutClasses'
+
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { verifyToken } from '@/libs/auth'
+
+// Styles Imports
+import styles from '@views/apps/kanban/styles.module.css'
+
+const KanbanPage = async () => {
+  return (
+    <div
+      className={classnames(
+        commonLayoutClasses.contentHeightFixed,
+        styles.scroll,
+        'is-full overflow-auto pis-2 -mis-2'
+      )}
+    >
+      <KanbanBoard />
+    </div>
+  )
+}
+
+export default KanbanPage
