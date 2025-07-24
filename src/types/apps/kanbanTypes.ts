@@ -1,5 +1,5 @@
 export type TaskType = {
-  id: string
+  id: number
   title: string
   badgeText?: string[]
   attachments?: number
@@ -7,17 +7,16 @@ export type TaskType = {
   assigned?: { src: string; name: string }[]
   image?: string
   dueDate?: Date
-  columnId: string
 }
 
 export type ColumnType = {
-  id: string
+  id: number
   title: string
-  taskIds: string[]
+  taskIds: number[]
 }
 
 export type KanbanType = {
   columns: ColumnType[]
   tasks: TaskType[]
-  currentTaskId?: string
+  currentTaskId?: number
 }

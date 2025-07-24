@@ -94,4 +94,4 @@ export const db: KanbanType = {
             dueDate: new Date(new Date().getFullYear(), 11, 5)
         }
     ]
-}
+}  
