@@ -1,3 +1,4 @@
+
 // React Imports
 import { useState } from 'react'
 
@@ -14,6 +15,10 @@ import type { InferInput } from 'valibot'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import { MenuItem } from '@mui/material'
 
 // Styled CustomTextField component
 const CustomTextFieldStyled = styled(CustomTextField)({
@@ -25,10 +30,18 @@ const CustomTextFieldStyled = styled(CustomTextField)({
 type FormData = InferInput<typeof schema>
 
 const schema = object({
-    content: pipe(string(), nonEmpty('Content is required'), minLength(1))
+    content: pipe(string(), nonEmpty('Content is required'), minLength(1)),
+    assigneeId: pipe(string(), nonEmpty('Assignee ID is required'), minLength(1))
 })
 
-const NewTask = ({ addTask }: { addTask: (content: string) => void }) => {
+type NewTaskProps = {
+    addTask: (title: string, assigneeId: string) => void
+    assigneeId: string
+    setAssigneeId: (value: string) => void
+    userIds: string[]
+}
+
+const NewTask = ({ addTask, assigneeId, setAssigneeId, userIds }: NewTaskProps) => {
     // States
     const [displayNewItem, setDisplayNewItem] = useState(false)
 
@@ -40,7 +53,8 @@ const NewTask = ({ addTask }: { addTask: (content: string) => void }) => {
         formState: { errors }
     } = useForm<FormData>({
         defaultValues: {
-            content: ''
+            content: '',
+            assigneeId: ''
         },
         resolver: valibotResolver(schema)
     })
@@ -52,15 +66,15 @@ const NewTask = ({ addTask }: { addTask: (content: string) => void }) => {
 
     // Handle the Add New Task form
     const onSubmit = (data: FormData) => {
-        addTask(data.content)
+        addTask(data.content, data.assigneeId)
         setDisplayNewItem(false)
-        reset({ content: '' })
+        reset({ content: '', assigneeId: '' })
     }
 
     // Handle reset
     const handleReset = () => {
         toggleDisplay()
-        reset({ content: '' })
+        reset({ content: '', assigneeId: '' })
     }
 
     return (
@@ -96,6 +110,32 @@ const NewTask = ({ addTask }: { addTask: (content: string) => void }) => {
                                 error={Boolean(errors.content)}
                                 helperText={errors.content ? errors.content.message : null}
                             />
+                        )}
+                    />
+                    <Controller
+                        name='assigneeId'
+                        control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth error={Boolean(errors.assigneeId)}>
+                                <InputLabel id="assignee-select-label">Assignee</InputLabel>
+                                <Select
+                                    labelId="assignee-select-label"
+                                    id="assignee-select"
+                                    label="Assignee"
+                                    {...field}
+                                >
+                                    {userIds.map((userId) => (
+                                        <MenuItem key={userId} value={userId}>
+                                            {userId}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {errors.assigneeId && (
+                                    <Typography variant="caption" color="error">
+                                        {errors.assigneeId.message}
+                                    </Typography>
+                                )}
+                            </FormControl>
                         )}
                     />
                     <div className='flex gap-3'>

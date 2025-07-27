@@ -5,7 +5,6 @@ import classnames from 'classnames'
 
 // Component Imports
 import NavToggle from './NavToggle'
-import Logo from '@components/layout/shared/Logo'
 import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import UserDropdown from '@components/layout/shared/UserDropdown'
 
@@ -25,8 +24,6 @@ const NavbarContent = () => {
     >
       <div className='flex items-center gap-4'>
         <NavToggle />
-        {/* Hide Logo on Smaller screens */}
-        {!isBreakpointReached && <Logo />}
       </div>
       <div className='flex items-center'>
         <ModeDropdown />

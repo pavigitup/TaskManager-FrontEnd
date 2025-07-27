@@ -1,15 +1,15 @@
 // Third-party Imports
 import { configureStore } from '@reduxjs/toolkit'
 
-import auth from './slices/auth'
-
 // Slice Imports
-import kanbanReducer from '../redux-store/slices/kanban'
+import kanbanReducer from '@/redux-store/slices/kanban'
+import authReducer from '@/redux-store/slices/auth'
+
 
 export const store = configureStore({
     reducer: {
-        auth,
-        kanbanReducer,
+        authReducer,
+        kanbanReducer
     },
     middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })

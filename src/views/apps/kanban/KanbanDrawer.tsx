@@ -1,24 +1,26 @@
 // React Imports
-import { useEffect, useState, useRef } from 'react'
-import type { ChangeEvent } from 'react'
+import { useEffect, useState } from 'react'
 
 // MUI Imports
 import Drawer from '@mui/material/Drawer'
 import Typography from '@mui/material/Typography'
 import MenuItem from '@mui/material/MenuItem'
-import Checkbox from '@mui/material/Checkbox'
-import ListItemText from '@mui/material/ListItemText'
-import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
-import InputAdornment from '@mui/material/InputAdornment'
+import Select from '@mui/material/Select'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
 import { minLength, nonEmpty, object, pipe, string } from 'valibot'
 import type { InferInput } from 'valibot'
+import axios from 'axios'
+
+// Utils
+import { validateTaskData, generateInitials } from '@/utils/kanbanUtils'
 
 // Type Imports
 import type { ColumnType, TaskType } from '@/types/apps/kanbanTypes'
@@ -32,9 +34,6 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 
-// Data Imports
-import { chipColor } from './TaskCard'
-
 type KanbanDrawerProps = {
     drawerOpen: boolean
     dispatch: AppDispatch
@@ -46,8 +45,16 @@ type KanbanDrawerProps = {
 
 type FormData = InferInput<typeof schema>
 
+type User = {
+    _id: string
+    username: string
+    email: string
+    avatar?: string
+}
+
 const schema = object({
-    title: pipe(string(), nonEmpty('Title is required'), minLength(1))
+    title: pipe(string(), nonEmpty('Title is required'), minLength(1)),
+    description: pipe(string(), nonEmpty('Description is required'))
 })
 
 const KanbanDrawer = (props: KanbanDrawerProps) => {
@@ -55,15 +62,12 @@ const KanbanDrawer = (props: KanbanDrawerProps) => {
     const { drawerOpen, dispatch, setDrawerOpen, task, columns, setColumns } = props
 
     // States
-    const [date, setDate] = useState<Date | undefined>(task.dueDate)
-    const [badgeText, setBadgeText] = useState(task.badgeText || [])
-    const [fileName, setFileName] = useState<string>('')
+    const [date, setDate] = useState<Date | undefined>(task.dueDate ? new Date(task.dueDate) : undefined)
     const [comment, setComment] = useState<string>('')
-
-    // Refs
-    const fileInputRef = useRef<HTMLInputElement>(null)
-
-    // Hooks
+    const [assigneeId, setAssigneeId] = useState<string>(task.assignee || '')
+    const [users, setUsers] = useState<User[]>([])
+    const [loading, setLoading] = useState(false)
+    const [updateError, setUpdateError] = useState<string>('')
     const {
         control,
         handleSubmit,
@@ -71,196 +75,287 @@ const KanbanDrawer = (props: KanbanDrawerProps) => {
         formState: { errors }
     } = useForm<FormData>({
         defaultValues: {
-            title: task.title
+            title: task.title,
+            description: task.description || ''
         },
         resolver: valibotResolver(schema)
     })
 
-    // Handle File Upload
-    const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
-        const { files } = event.target
-
-        if (files && files.length !== 0) {
-            setFileName(files[0].name)
+    const fetchUsers = async () => {
+        try {
+            setLoading(true)
+            const token = localStorage.getItem('token')
+            const response = await axios.get('http://localhost:8001/api/auth/users', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        } catch (error) {
+            console.error('Error fetching users:', error)
+        } finally {
+            setLoading(false)
         }
     }
 
-    // Close Drawer
+    useEffect(() => {
+        reset({
+            title: task.title,
+            description: task.description || ''
+        })
+        setDate(task.dueDate ? new Date(task.dueDate) : undefined)
+        setComment(task.comment || '')
+        fetchUsers()
+    }, [task, reset])
+
+    useEffect(() => {
+        if (drawerOpen) {
+            fetchUsers()
+        }
+    }, [drawerOpen])
+
     const handleClose = () => {
         setDrawerOpen(false)
-        reset({ title: task.title })
-        setBadgeText(task.badgeText || [])
-        setDate(task.dueDate)
-        setFileName('')
+        setUpdateError('')
+        reset({
+            title: task.title,
+            description: task.description || ''
+        })
+        setDate(task.dueDate ? new Date(task.dueDate) : undefined)
         setComment('')
+        setAssigneeId(task.assignee || '')
+    }
 
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
+    const updateTask = async (data: FormData) => {
+        try {
+            setLoading(true)
+            setUpdateError('')
+
+            const validation = validateTaskData({
+                title: data.title,
+                description: data.description
+            })
+
+            if (!validation.isValid) {
+                setUpdateError(validation.errors.join(', '))
+                return
+            }
+
+            const updatedTaskData = {
+                id: task._id,
+                title: data.title.trim(),
+                description: data.description.trim(),
+                dueDate: date?.toISOString(),
+                assignee: assigneeId,
+                status: task.status,
+                priority: task.priority,
+                comment: task?.comment
+            }
+            const result = await dispatch(editTask(updatedTaskData)).unwrap()
+            const updatedColumns = columns.map(column => {
+                const updatedTaskIds = column.taskIds.map(taskId =>
+                    taskId === task._id ? result._id || task._id : taskId
+                )
+                return { ...column, taskIds: updatedTaskIds }
+            })
+            setColumns(updatedColumns)
+
+            handleClose()
+        } catch (error: any) {
+            console.error('Error updating task:', error)
+            setUpdateError(error.message || 'Failed to update task')
+        } finally {
+            setLoading(false)
         }
     }
 
-    // Update Task
-    const updateTask = (data: FormData) => {
-        dispatch(editTask({ id: task.id, title: data.title, badgeText, dueDate: date }))
-        handleClose()
-    }
-
-    // Handle Reset
-    const handleReset = () => {
-        setDrawerOpen(false)
-        dispatch(deleteTask(task.id))
-
-        const updatedColumns = columns.map(column => {
-            return {
+    // Handle Delete Task
+    const handleDeleteTask = async () => {
+        try {
+            setLoading(true)
+            await dispatch(deleteTask(task._id)).unwrap()
+            const updatedColumns = columns.map(column => ({
                 ...column,
-                taskIds: column.taskIds.filter(taskId => taskId !== task.id)
-            }
-        })
+                taskIds: column.taskIds.filter(taskId => taskId !== task._id)
+            }))
 
-        setColumns(updatedColumns)
+            setColumns(updatedColumns)
+            setDrawerOpen(false)
+        } catch (error) {
+            console.error('Error deleting task:', error)
+        } finally {
+            setLoading(false)
+        }
     }
 
-    // To set the initial values according to the task
+    // Set initial values when task changes
     useEffect(() => {
-        reset({ title: task.title })
-        setBadgeText(task.badgeText || [])
-        setDate(task.dueDate)
+        reset({
+            title: task.title,
+            description: task.description || ''
+        })
+        setDate(task.dueDate ? new Date(task.dueDate) : undefined)
+        setAssigneeId(task.assignee || '')
     }, [task, reset])
 
     return (
-        <div>
-            <Drawer
-                open={drawerOpen}
-                anchor='right'
-                variant='temporary'
-                ModalProps={{ keepMounted: true }}
-                sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 400 } } }}
-                onClose={handleClose}
-            >
-                <div className='flex justify-between items-center pli-6 plb-5 border-be'>
-                    <Typography variant='h5'>Edit Task</Typography>
-                    <IconButton size='small' onClick={handleClose}>
-                        <i className='tabler-x text-2xl text-textPrimary' />
-                    </IconButton>
-                </div>
-                <div className='p-6'>
-                    <form className='flex flex-col gap-y-5' onSubmit={handleSubmit(updateTask)}>
-                        <Controller
-                            name='title'
-                            control={control}
-                            render={({ field }) => (
-                                <CustomTextField
-                                    fullWidth
-                                    label='Title'
-                                    {...field}
-                                    error={Boolean(errors.title)}
-                                    helperText={errors.title?.message}
-                                />
-                            )}
-                        />
+        <Drawer
+            open={drawerOpen}
+            anchor='right'
+            variant='temporary'
+            ModalProps={{ keepMounted: true }}
+            sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 400 } } }}
+            onClose={handleClose}
+        >
+            <div className='flex justify-between items-center pli-6 plb-5 border-be'>
+                <Typography variant='h5'>Edit Task</Typography>
+                <IconButton size='small' onClick={handleClose}>
+                    <i className='tabler-x text-2xl text-textPrimary' />
+                </IconButton>
+            </div>
 
-                        <AppReactDatepicker
-                            selected={date ? new Date(date) : new Date()}
-                            id='basic-input'
-                            onChange={(date: Date | null) => {
-                                if (date) {
-                                    setDate(date)
-                                }
-                            }}
-
-                            placeholderText='Click to select a date'
-                            dateFormat={'d MMMM, yyyy'}
-                            customInput={<CustomTextField label='Due Date' fullWidth />}
-                        />
-                        <CustomTextField
-                            select
-                            label='Label'
-                            SelectProps={{
-                                multiple: true,
-                                value: badgeText || [],
-                                onChange: e => setBadgeText(e.target.value as string[]),
-                                renderValue: selected => (
-                                    <div className='flex flex-wrap gap-1'>
-                                        {(selected as string[]).map(value => (
-                                            <Chip
-                                                variant='tonal'
-                                                key={value}
-                                                size='small'
-                                                onMouseDown={e => e.stopPropagation()}
-                                                label={value}
-                                                color={chipColor[value]?.color}
-                                                onDelete={() => setBadgeText(current => current.filter(item => item !== value))}
-                                            />
-                                        ))}
-                                    </div>
-                                )
-                            }}
-                        >
-                            {Object.keys(chipColor).map(chip => (
-                                <MenuItem key={chip} value={chip}>
-                                    <Checkbox checked={badgeText && badgeText.indexOf(chip) > -1} />
-                                    <ListItemText primary={chip} />
-                                </MenuItem>
-                            ))}
-                        </CustomTextField>
-                        <div>
-                            <Typography variant='caption' color='text.primary'>
-                                Assigned
+            <div className='p-6'>
+                <form className='flex flex-col gap-y-5' onSubmit={handleSubmit(updateTask)}>
+                    {/* Error Display */}
+                    {updateError && (
+                        <div className='p-3 bg-red-50 border border-red-200 rounded-md'>
+                            <Typography variant='body2' color='error'>
+                                {updateError}
                             </Typography>
-                            <div className='flex gap-1'>
-                                {task.assigned?.map((avatar, index) => (
-                                    <Tooltip title={avatar.name} key={index}>
-                                        <CustomAvatar key={index} src={avatar.src} size={26} className='cursor-pointer' />
-                                    </Tooltip>
-                                ))}
-                                <CustomAvatar size={26} className='cursor-pointer'>
-                                    <i className='tabler-plus text-base text-textSecondary' />
-                                </CustomAvatar>
-                            </div>
                         </div>
-                        <div className='flex items-center gap-4'>
+                    )}
+
+                    {/* Title Field */}
+                    <Controller
+                        name='title'
+                        control={control}
+                        render={({ field }) => (
                             <CustomTextField
                                 fullWidth
-                                placeholder='Choose File'
-                                variant='outlined'
-                                value={fileName}
-                                InputProps={{
-                                    readOnly: true,
-                                    endAdornment: fileName ? (
-                                        <InputAdornment position='end'>
-                                            <IconButton size='small' edge='end' onClick={() => setFileName('')}>
-                                                <i className='tabler-x' />
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ) : null
-                                }}
+                                label='Title'
+                                {...field}
+                                error={Boolean(errors.title)}
+                                helperText={errors.title?.message}
+                                disabled={loading}
                             />
-                            <Button component='label' variant='tonal' htmlFor='contained-button-file'>
-                                Choose
-                                <input hidden id='contained-button-file' type='file' onChange={handleFileUpload} ref={fileInputRef} />
-                            </Button>
+                        )}
+                    />
+
+                    {/* Description Field */}
+                    <Controller
+                        name='description'
+                        control={control}
+                        render={({ field }) => (
+                            <CustomTextField
+                                fullWidth
+                                label='Description'
+                                {...field}
+                                multiline
+                                rows={3}
+                                error={Boolean(errors.description)}
+                                helperText={errors.description?.message}
+                                disabled={loading}
+                            />
+                        )}
+                    />
+
+                    {/* Due Date */}
+                    <AppReactDatepicker
+                        selected={date}
+                        id='due-date-picker'
+                        onChange={(date: Date) => setDate(date)}
+                        placeholderText='Click to select a date'
+                        dateFormat={'d MMMM, yyyy'}
+                        customInput={<CustomTextField label='Due Date' fullWidth disabled={loading} />}
+                    />
+
+                    {/* Assignee Dropdown */}
+                    <FormControl fullWidth disabled={loading}>
+                        <InputLabel id="assignee-select-label">Assignee</InputLabel>
+                        <Select
+                            labelId="assignee-select-label"
+                            id="assignee-select"
+                            value={assigneeId}
+                            label="Assignee"
+                            onChange={(e) => setAssigneeId(e.target.value)}
+                            displayEmpty
+                        >
+                            <MenuItem value="">
+                                <em>No Assignee</em>
+                            </MenuItem>
+                            {users.map((user) => (
+                                <MenuItem key={user._id} value={user._id}>
+                                    <div className='flex items-center gap-2'>
+                                        <CustomAvatar
+                                            src={user.avatar}
+                                            size={24}
+                                            className='shrink-0'
+                                        >
+                                            {generateInitials(user.username)}
+                                        </CustomAvatar>
+                                        <div className='flex flex-col'>
+                                            <Typography variant='body2'>{user.username}</Typography>
+                                            <Typography variant='caption' color='text.secondary'>
+                                                {user.email}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    {/* Current Assigned Users Display */}
+                    {task.assigned && task.assigned.length > 0 && (
+                        <div>
+                            <Typography variant='caption' color='text.primary'>
+                                Currently Assigned
+                            </Typography>
+                            <div className='flex gap-1 mt-2'>
+                                {task.assigned.map((avatar, index) => (
+                                    <Tooltip title={avatar.name} key={index}>
+                                        <CustomAvatar
+                                            src={avatar.src}
+                                            size={26}
+                                            className='cursor-pointer'
+                                        />
+                                    </Tooltip>
+                                ))}
+                            </div>
                         </div>
-                        <CustomTextField
-                            fullWidth
-                            label='Comment'
-                            value={comment}
-                            onChange={e => setComment(e.target.value)}
-                            multiline
-                            rows={4}
-                            placeholder='Write a Comment....'
-                        />
-                        <div className='flex gap-4'>
-                            <Button variant='contained' color='primary' type='submit'>
-                                Update
-                            </Button>
-                            <Button variant='tonal' color='error' type='reset' onClick={handleReset}>
-                                Delete
-                            </Button>
-                        </div>
-                    </form>
-                </div>
-            </Drawer>
-        </div>
+                    )}
+
+
+                    {/* Comments */}
+                    <CustomTextField
+                        fullWidth
+                        label='Comment'
+                        value={comment}
+                        onChange={e => setComment(e.target.value)}
+                        multiline
+                        rows={4}
+                        placeholder='Write a Comment....'
+                        disabled={loading}
+                    />
+
+                    {/* Action Buttons */}
+                    <div className='flex gap-4'>
+                        <Button
+                            variant='contained'
+                            color='primary'
+                            type='submit'
+                            disabled={loading}
+                        >
+                            {loading ? 'Updating...' : 'Update'}
+                        </Button>
+                        <Button
+                            variant='tonal'
+                            color='error'
+                            onClick={handleDeleteTask}
+                            disabled={loading}
+                        >
+                            {loading ? 'Deleting...' : 'Delete'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </Drawer>
     )
 }
 

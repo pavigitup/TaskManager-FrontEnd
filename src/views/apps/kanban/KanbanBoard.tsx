@@ -1,84 +1,133 @@
-'use client'
-
-// React Imports
-import type { RefObject } from 'react'
-import { useEffect, useState } from 'react'
-
-// Third-party imports
-import { useDragAndDrop } from '@formkit/drag-and-drop/react'
-import { animations } from '@formkit/drag-and-drop'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-
-// Type Imports
-import type { RootState } from '@/redux-store'
-
-// Slice Imports
-import { addColumn, updateColumns } from '@/redux-store/slices/kanban'
-
-// Component Imports
+import { Box, Button, Grid, Typography } from '@mui/material'
+import { RootState } from '@/redux-store/index'
+import { fetchTasks, addColumn } from '@/redux-store/slices/kanban'
 import KanbanList from './KanbanList'
-import NewColumn from './NewColumn'
+import { ColumnType, TaskType } from '@/types/apps/kanbanTypes'
+import { nanoid } from 'nanoid'
 import KanbanDrawer from './KanbanDrawer'
 
 const KanbanBoard = () => {
-  // State
-  const [drawerOpen, setDrawerOpen] = useState(false)
-
-  // Hooks
-  const kanbanStore = useSelector((state: RootState) => state.kanbanReducer)
   const dispatch = useDispatch()
+  const kanbanStore = useSelector((state: RootState) => state.kanbanReducer)
 
-  const [boardRef, columns, setColumns] = useDragAndDrop(kanbanStore.columns, {
-    plugins: [animations()],
-    dragHandle: '.list-handle'
-  })
+  const [columns, setColumns] = useState<ColumnType[]>([])
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState<TaskType | undefined>(undefined)
 
-  // Add New Column
+  useEffect(() => {
+    dispatch(fetchTasks() as any)
+  }, [dispatch])
+
+  useEffect(() => {
+    const groupedByStatus: Record<string, string[]> = {}
+
+    kanbanStore?.tasks?.forEach(task => {
+
+      const status = task.status
+      if (!groupedByStatus[status]) {
+        groupedByStatus[status] = []
+      }
+      groupedByStatus[status].push(task._id)
+    })
+
+    const newColumns: ColumnType[] = Object.entries(groupedByStatus).map(([status, taskIds]) => ({
+      id: nanoid(),
+      title: status,
+      taskIds
+    }))
+
+    setColumns(newColumns)
+  }, [kanbanStore.tasks])
+
+  useEffect(() => {
+    if (kanbanStore.currentTaskId) {
+      const task = kanbanStore.tasks.find(task => task._id === kanbanStore.currentTaskId)
+      if (task) {
+        setCurrentTask(task)
+        setDrawerOpen(true)
+      }
+    } else {
+      setCurrentTask(undefined)
+      setDrawerOpen(false)
+    }
+  }, [kanbanStore.currentTaskId, kanbanStore.tasks])
+
   const addNewColumn = (title: string) => {
-    const maxId = Math.max(...kanbanStore.columns.map(column => column.id))
+    const newColumn: ColumnType = {
+      id: nanoid(),
+      title,
+      taskIds: []
+    }
 
-    dispatch(addColumn(title))
-    setColumns([...columns, { id: maxId + 1, title, taskIds: [] }])
+    dispatch(addColumn(newColumn))
+    setColumns(prev => [...prev, newColumn])
   }
 
-  // To get the current task for the drawer
-  const currentTask = kanbanStore.tasks.find(task => task.id === kanbanStore.currentTaskId)
+  const handleTaskClick = (task: TaskType) => {
+    setCurrentTask(task)
+    setDrawerOpen(true)
+  }
 
-  // Update Columns on Drag and Drop
-  useEffect(() => {
-    if (columns !== kanbanStore.columns) dispatch(updateColumns(columns))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columns])
+  const handleDrawerClose = (open: boolean) => {
+    setDrawerOpen(open)
+    if (!open) {
+      setCurrentTask(undefined)
+    }
+  }
 
   return (
-    <div className='flex items-start gap-6'>
-      <div ref={boardRef as RefObject<HTMLDivElement>} className='flex gap-6'>
-        {columns.map(column => (
-          <KanbanList
-            key={column.id}
-            dispatch={dispatch}
-            column={column}
-            store={kanbanStore}
-            setDrawerOpen={setDrawerOpen}
-            columns={columns}
-            setColumns={setColumns}
-            currentTask={currentTask}
-            tasks={column.taskIds.map(taskId => kanbanStore.tasks.find(task => task.id === taskId))}
-          />
-        ))}
-      </div>
-      <NewColumn addNewColumn={addNewColumn} />
+    <Box p={4}>
+      <Typography variant="h5" gutterBottom>
+        Kanban Board
+      </Typography>
+
+      <Grid container spacing={4}>
+        {columns.map(column => {
+          const tasks: TaskType[] = column.taskIds
+            .map(taskId => kanbanStore.tasks.find(task => task._id === taskId))
+            .filter((task): task is TaskType => !!task)
+
+          return (
+            <Grid item xs={12} md={4} key={column.id}>
+              <KanbanList
+                column={column}
+                tasks={tasks}
+                dispatch={dispatch}
+                store={kanbanStore}
+                setDrawerOpen={handleDrawerClose}
+                columns={columns}
+                setColumns={setColumns}
+                currentTask={currentTask}
+                onTaskClick={handleTaskClick}
+              />
+            </Grid>
+          )
+        })}
+      </Grid>
+
+      <Box mt={4}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => addNewColumn(`Column ${columns.length + 1}`)}
+        >
+          Add New Column
+        </Button>
+      </Box>
+
       {currentTask && (
         <KanbanDrawer
           task={currentTask}
           drawerOpen={drawerOpen}
-          setDrawerOpen={setDrawerOpen}
+          setDrawerOpen={handleDrawerClose}
           dispatch={dispatch}
           columns={columns}
           setColumns={setColumns}
         />
       )}
-    </div>
+    </Box>
   )
 }
 

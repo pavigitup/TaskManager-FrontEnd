@@ -1,106 +1,44 @@
-import type { PayloadAction } from '@reduxjs/toolkit';
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
-
-interface User {
-
-  // Define user properties here
-  id: string;
-  email: string;
-
-  // Add other relevant user properties
-}
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface AuthState {
-  user: User | null;
-  loading: boolean;
-  error: string | null;
-  tasks: any[]; // Consider creating a Task interface
+    userRole: string
+    username: string
+    token: string
 }
 
-export const loginUser = createAsyncThunk(
-    'auth/loginUser',
-    async ({ email, password }: { email: string; password: string }, thunkAPI) => {
-        try {
-            const res = await axios.post<{ token: string; user: User }>(
-                'http://localhost:5000/api/auth/login',
-                { email, password },
-                {
-                    withCredentials: true
-                }
-            )
-
-            localStorage.setItem('token', res.data.token)
-            
-return res.data.user
-        } catch (err: any) {
-            return thunkAPI.rejectWithValue(err.response?.data || 'Login failed')
-        }
-    }
-)
-
-export const getTasks = createAsyncThunk('auth/getTasks', async (_, thunkAPI) => {
-    try {
-        const token = localStorage.getItem('token')
-
-        const res = await axios.get('http://localhost:5000/api/tasks', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-
-        
-return res.data
-    } catch (err: any) {
-        return thunkAPI.rejectWithValue(err.response?.data || 'Failed to fetch tasks')
-    }
-})
-
 const initialState: AuthState = {
-    user: null,
-    loading: false,
-    error: null,
-    tasks: []
+    userRole: typeof window !== 'undefined' ? localStorage.getItem('userRole') || '' : '',
+    username: typeof window !== 'undefined' ? localStorage.getItem('username') || '' : '',
+    token: typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
 }
 
 const authSlice = createSlice({
     name: 'auth',
     initialState,
     reducers: {
-        logout: (state) => {
-            state.user = null
-            state.tasks = []
-            localStorage.removeItem('token') 
+        setUserRole: (state, action: PayloadAction<string>) => {
+            state.userRole = action.payload
+            localStorage.setItem('userRole', action.payload)
+        },
+        setUserName: (state, action: PayloadAction<string>) => {
+            state.username = action.payload
+            localStorage.setItem('username', action.payload)
+        },
+        setTokens: (state, action: PayloadAction<string>) => {
+            state.token = action.payload
+            localStorage.setItem('token', action.payload)
+        },
+        clearAuth: (state) => {
+            state.username = ''
+            state.userRole = ''
+            state.token = ''
+            localStorage.removeItem('username')
+            localStorage.removeItem('userRole')
+            localStorage.removeItem('token')
         }
-    },
-    extraReducers: (builder) => {
-        builder
-            .addCase(loginUser.pending, (state) => {
-                state.loading = true
-                state.error = null
-            })
-            .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
-                state.loading = false
-                state.user = action.payload
-                state.error = null
-            })
-            .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
-                state.loading = false
-                state.error = action.payload?.message || 'Login failed'
-            })
-            .addCase(getTasks.pending, (state) => {
-                state.loading = true
-                state.error = null
-            })
-            .addCase(getTasks.fulfilled, (state, action: PayloadAction<any[]>) => {
-                state.loading = false
-                state.tasks = action.payload
-                state.error = null
-            })
-            .addCase(getTasks.rejected, (state, action: PayloadAction<any>) => {
-                state.loading = false
-                state.error = action.payload?.message || 'Failed to fetch tasks'
-            })
     }
 })
 
-export const { logout } = authSlice.actions
+export const { setUserRole, setUserName, setTokens, clearAuth } = authSlice.actions
+
 export default authSlice.reducer
