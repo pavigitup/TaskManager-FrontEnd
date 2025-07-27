@@ -71,7 +71,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         }
 
         try {
-            const res = await axios.post('http://localhost:8001/api/auth/register', {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}` + "/register", {
                 username,
                 email,
                 password,

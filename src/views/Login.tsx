@@ -76,7 +76,7 @@ const LoginV2 = () => {
     }
 
     try {
-      const responseData = await axios.post("http://localhost:8001/api/auth/login", authLoginPostRequest);
+      const responseData = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}` + "/login", authLoginPostRequest);
       if (responseData && responseData?.data?.data?.token) {
         onSubmitSuccess(responseData?.data?.data?.token);
       }

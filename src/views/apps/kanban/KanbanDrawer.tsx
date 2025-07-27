@@ -85,7 +85,7 @@ const KanbanDrawer = (props: KanbanDrawerProps) => {
         try {
             setLoading(true)
             const token = localStorage.getItem('token')
-            const response = await axios.get('http://localhost:8001/api/auth/users', {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}` + "/auth/users", {
                 headers: { Authorization: `Bearer ${token}` }
             })
         } catch (error) {

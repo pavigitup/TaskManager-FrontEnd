@@ -3,7 +3,6 @@ import axios from 'axios'
 import type { KanbanType, TaskTypeRequest } from '@/types/apps/kanbanTypes'
 
 
-const API_BASE_URL = 'http://localhost:8001/api'
 
 
 const getAuthToken = () => localStorage.getItem('token')
@@ -14,7 +13,7 @@ export const fetchTasks = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const token = getAuthToken()
-            const response = await axios.get(`${API_BASE_URL}/tasks`, {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             return response.data.data.tasks
