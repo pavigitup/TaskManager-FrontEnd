@@ -260,7 +260,7 @@ const KanbanDrawer = (props: KanbanDrawerProps) => {
                     <AppReactDatepicker
                         selected={date}
                         id='due-date-picker'
-                        onChange={(date: Date) => setDate(date)}
+                        onChange={(newDate: Date | null) => setDate(newDate || undefined)}
                         placeholderText='Click to select a date'
                         dateFormat={'d MMMM, yyyy'}
                         customInput={<CustomTextField label='Due Date' fullWidth disabled={loading} />}

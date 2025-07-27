@@ -28,7 +28,7 @@ export const addTask = createAsyncThunk(
     async (taskData: TaskTypeRequest, { rejectWithValue }) => {
         try {
             const token = getAuthToken()
-            const response = await axios.post(`${API_BASE_URL}/tasks`, taskData, {
+            const response = await axios.post("https://taskmanager-backend-2-otiv.onrender.com/api/tasks", taskData, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
@@ -56,7 +56,7 @@ export const editTask = createAsyncThunk(
             const token = getAuthToken()
             const { id, ...updateData } = taskData
 
-            const response = await axios.put(`${API_BASE_URL}/tasks/${id}`, updateData, {
+            const response = await axios.put(`https://taskmanager-backend-2-otiv.onrender.com/api/tasks/${id}`, updateData, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
@@ -75,7 +75,7 @@ export const deleteTask = createAsyncThunk(
     async (taskId: string, { rejectWithValue }) => {
         try {
             const token = getAuthToken()
-            await axios.delete(`${API_BASE_URL}/tasks/${taskId}`, {
+            await axios.delete(`https://taskmanager-backend-2-otiv.onrender.com/api/tasks/${taskId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             return taskId
