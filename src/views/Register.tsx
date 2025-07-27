@@ -71,7 +71,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         }
 
         try {
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}` + "/register", {
+            const res = await axios.post("https://taskmanager-backend-2-otiv.onrender.com/api/auth/register", {
                 username,
                 email,
                 password,

@@ -13,7 +13,7 @@ export const fetchTasks = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const token = getAuthToken()
-            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
+            const response = await axios.get("https://taskmanager-backend-2-otiv.onrender.com/api/tasks", {
                 headers: { Authorization: `Bearer ${token}` }
             })
             return response.data.data.tasks

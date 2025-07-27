@@ -76,7 +76,7 @@ const LoginV2 = () => {
     }
 
     try {
-      const responseData = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}` + "/login", authLoginPostRequest);
+      const responseData = await axios.post("https://taskmanager-backend-2-otiv.onrender.com/api/auth/login", authLoginPostRequest);
       if (responseData && responseData?.data?.data?.token) {
         onSubmitSuccess(responseData?.data?.data?.token);
       }

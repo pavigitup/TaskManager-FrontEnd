@@ -85,7 +85,7 @@ const KanbanDrawer = (props: KanbanDrawerProps) => {
         try {
             setLoading(true)
             const token = localStorage.getItem('token')
-            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}` + "/auth/users", {
+            const response = await axios.get("https://taskmanager-backend-2-otiv.onrender.com/api/auth/users", {
                 headers: { Authorization: `Bearer ${token}` }
             })
         } catch (error) {
