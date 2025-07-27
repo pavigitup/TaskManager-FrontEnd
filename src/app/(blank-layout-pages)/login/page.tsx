@@ -1,22 +1,8 @@
-// Next Imports
-import type { Metadata } from 'next'
+// app/login/page.tsx
+import dynamic from 'next/dynamic'
 
-// Component Imports
-import Login from '@views/Login'
+const LoginClient = dynamic(() => import('./LoginClient'), { ssr: false })
 
-// Server Action Imports
-import { getServerMode } from '@core/utils/serverHelpers'
-
-export const metadata: Metadata = {
-  title: 'Login',
-  description: 'Login to your account'
+export default function LoginPage() {
+  return <LoginClient />
 }
-
-const LoginPage = () => {
-  // Vars
-  const mode = getServerMode()
-
-  return <Login mode={mode} />
-}
-
-export default LoginPage

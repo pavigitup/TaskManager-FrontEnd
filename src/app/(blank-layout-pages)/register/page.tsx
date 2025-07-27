@@ -1,22 +1,8 @@
-// Next Imports
-import type { Metadata } from 'next'
+// app/login/page.tsx
+import dynamic from 'next/dynamic'
 
-// Component Imports
-import Register from '@views/Register'
+const RegisterClient = dynamic(() => import('./RegisterClient'), { ssr: false })
 
-// Server Action Imports
-import { getServerMode } from '@core/utils/serverHelpers'
-
-export const metadata: Metadata = {
-    title: 'Register',
-    description: 'Register to your account'
+export default function RegisterPage() {
+    return <RegisterClient />
 }
-
-const RegisterPage = () => {
-    // Vars
-    const mode = getServerMode()
-
-    return <Register mode={mode} />
-}
-
-export default RegisterPage
